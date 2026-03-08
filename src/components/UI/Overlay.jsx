@@ -72,7 +72,26 @@ export default function Overlay() {
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(16,185,129,0.05)',
                     transition: 'transform 0.2s ease, background 0.2s ease'
                 }}
-                    onClick={() => document.querySelector('canvas')?.requestPointerLock()}
+                    onClick={() => {
+                        const canvas = document.querySelector('canvas');
+                        if (canvas && canvas.requestPointerLock) {
+                            try {
+                                const promise = canvas.requestPointerLock();
+                                if (promise) {
+                                    promise.catch(err => {
+                                        console.error('Pointer lock failed:', err);
+                                        setLocked(true); // Fallback so user isn't stuck
+                                    });
+                                }
+                            } catch (err) {
+                                console.error('Pointer lock error:', err);
+                                setLocked(true);
+                            }
+                        } else {
+                            console.warn('Canvas not ready or pointer lock not supported');
+                            setLocked(true);
+                        }
+                    }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(16,185,129,0.07)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                 >
