@@ -1,101 +1,288 @@
-# KHU Innovation and Learning Hub 3D - Comprehensive Technical Report
+# Technical Report: NexusPoint Innovation & Learning Hub
+### Interactive 3D Virtual Environment — Computer Graphics Assignment
+
+---
 
 ## 1. Introduction
-This project implements a fully interactive 3D virtual model of the proposed **KHU Innovation and Learning Hub** (dubbed "Zuntenium - The Quantum Innovation Hub"). The primary purpose of the project is to construct a rigorous demonstration of advanced computer graphics concepts within a functional, real-time WebGL environment. 
 
-Rather than a static 3D mesh, the scene simulates a comprehensive educational and innovative ecosystem. It includes five distinct procedural areas:
-- **A Reception Area**: Featuring interactive sliding glass doors, hierarchical desk structures, and real-time togglable point lighting.
-- **An AI & Cybersecurity Lab**: Featuring arrays of server nodes and a central animated Quantum Core reacting to advanced distortion shading.
-- **A Collaborative Workspace**: Demonstrating scaled procedural generation of desk clusters utilizing bounding volume logic.
-- **A Smart Classroom**: Featuring procedurally textured surfaces and emissive smartboard projection systems.
-- **An Outdoor Environment**: Featuring expansive procedural noise texturing (concrete and grass), particle scattering, and hierarchically modeled sci-fi landscaping.
+This report documents the design and implementation of an interactive 3D virtual model of the **NexusPoint Innovation and Learning Hub**, developed using **Three.js** (via **React Three Fiber** and **@react-three/drei**) and rendered in a WebGL-powered browser application. The project simulates a multi-room educational and innovation facility, allowing the user to explore five distinct spaces: a Reception Area, an AI & Cybersecurity Lab, a Collaborative Workspace, a Smart Classroom, and an Outdoor Campus Environment.
 
-The primary objective of this project was to directly align the development of these spaces with foundational Computer Graphics principles, specifically focusing on 3D Modeling (Primitives), Geometric and Affine Transformations, Hierarchical Matrix Scoping, Lighting/Shading Models, Interactive Camera Projections, and procedural real-time Animations. 
+The primary goal of this project is to demonstrate a comprehensive set of Computer Graphics principles including 3D transformations, lighting and shading models, camera projection techniques, keyframe and procedural animation, user interaction, and advanced rendering techniques such as shadow mapping, texture mapping, and depth testing.
+
+The application is hosted as a web application and runs entirely in the browser with no server-side rendering dependency.
+
+---
 
 ## 2. System Architecture
-The application is constructed utilizing a highly modular modern JavaScript web ecosystem, prioritizing component-driven architecture to abstract standard low-level WebGL context creation:
 
-- **React (v18)**: Serves as the overarching structural framework. It handles the application UI state (e.g., overlay rendering), global state injection via `zustand`, and component lifecycle mounting.
-- **Three.js**: The core WebGL 3D rendering engine. It provides the mathematically heavy classes (`Matrix4`, `Vector3`, `PerspectiveCamera`, `WebGLRenderer`) required to calculate the graphics pipeline frame-by-frame.
-- **React Three Fiber (R3F)**: A powerful React reconciler tailored for Three.js. It allows 3D objects to be declared declaratively as JSX components (`<mesh>`, `<group>`), automatically managing the Three.js scene graph, rendering loops, and memory disposal upon component unmounting.
-- **Drei**: A collection of high-quality helper abstractions built around R3F. It is heavily utilized for complex environmental effects (`<Environment>`, `<Stars>`, `<Sparkles>`), and simplified camera management (`<PointerLockControls>`).
-- **Vite**: The build tool of choice, ensuring extremely rapid Hot Module Replacement (HMR) during development and highly optimized asset chunking for production static delivery.
+The application is structured as a **component-based React application** built on top of `@react-three/fiber`, a React renderer for Three.js. The architecture follows a clear hierarchical decomposition:
 
-### Structural Flow
-1. `main.jsx` mounts the standard React DOM.
-2. `App.jsx` establishes the global `Canvas` (the WebGL context), defines universal lighting schemas, the backdrop environment configuration, and manages the explicit projection toggling logic.
-3. `Player.jsx` assumes direct control of the active camera matrix, applying custom calculation loops to restrict player movement within a mathematical boundary space while reading physical hardware inputs.
-4. `components/Environment/` houses the compartmentalized room definitions. Each file (e.g., `AILab.jsx`) acts as an isolated sub-scene graph that is aggregated by `Hub.jsx`.
-5. `components/Objects/` contains isolated, self-animating 3D entities. These geometries (like the Drone and Door controllers) manage their own internal `useFrame` render states independent of the overarching global scene loop to ensure code scalability.
-6. `utils/textures.js` mathematically generates raw procedural textures using the HTML5 `<canvas>` API, injecting the resulting Data URLs directly into the Three.js material parameter pipeline to fulfill dynamic texture mapping requirements without relying on external image asset downloads.
+```
+App.jsx                    ← Root scene: Canvas, Camera, Lights, Environment
+│
+├── Overlay.jsx            ← HTML UI layer (branding, HUD, crosshair, projection toggle)
+│
+└── Hub.jsx                ← Scene graph root (Orthogonal T-Junction Grid Layout)
+    ├── Center/Cross Halls ← connecting corridors (fully enclosed walls/ceilings)
+    ├── Outdoors.jsx       ← Ground, walkways, trees, environmental sparkles
+    ├── Reception.jsx      ← Front entrance (doorway cut into back wall)
+    ├── AILab.jsx          ← Back centerpiece (Deep Z-axis endpoint)
+    ├── Workspace.jsx      ← Right wing pod (rotated exactly 90 degrees)
+    ├── Classroom.jsx      ← Left wing pod
+    ├── Drone.jsx          ← Patrolling NPC drone (animated, 16-segment optimization)
+    ├── Door.jsx           ← Sliding entrance door (interactive)
+    └── SecurityCamera.jsx ← Oscillating surveillance camera (animated)
+```
 
-## 3. Explanation of Graphics Pipeline Implementation
-The project explicitly leverages the standard WebGL graphics pipeline, abstracted effectively through the Three.js render cycle:
+**State Management:** A lightweight `zustand` store (`store.js`) holds the `isPerspective` boolean flag that controls the active camera projection mode.
 
-### 3.1 Vertex Processing and Model Mapping
-When React Three Fiber instantiates a component such as `<boxGeometry args={[width, height, depth]} />`, it generates a local array of vertices and surface normals. Three.js takes these local vertex coordinates and multiplies them by a computed **Model Matrix** (derived from the exact combination of the object's `position`, `rotation`, and `scale` props). This transforms the object from its isolated local coordinate system into the unified global *World Space*.
+**Player Controller:** The `Player.jsx` component couples `PointerLockControls` with `useKeyboardControls` to deliver a first-person walkthrough experience.
 
-### 3.2 Camera and Projection Matrices
-The project intentionally incorporates two distinct projection methodologies to mathematically demonstrate viewing volume processing. A global state manages a toggle between the two nodes:
+**Texture System:** All textures are procedurally generated at runtime via Canvas 2D API in `utils/textures.js`, eliminating any external CDN dependency.
 
-- **Perspective Projection (`PerspectiveCamera`)**: Defines a truncated pyramid viewing volume (a *frustum*). Utilizing a Field of View (FOV) of 60 degrees, the projection matrix divides the X and Y coordinates by the Z distance (depth). This mathematical step ensures that distant vertices are mapped closer together on the finalized 2D screen, creating realistic perspective convergence and vanishing points.
-- **Orthographic Projection (`OrthographicCamera`)**: Defines a rectangular prism viewing volume. The projection matrix does not divide by Z distance; instead, it scales everything isotropically. Parallel lines in standard 3D space remain perfectly parallel on the 2D screen, simulating an isometric technical engineering viewpoint.
+---
 
-### 3.3 Rasterization and Depth Evaluation
-Following projection, primitives (triangles) are rasterized into 2D fragments (pixels). The `Canvas` configuration relies on strict Z-buffer Depth Testing. During rasterization, the GPU checks the depth value of every incoming fragment against the existing frame buffer. If the incoming fragment is behind an existing pixel relative to the camera vector, it is correctly discarded (occluded).
+## 3. Graphics Pipeline Implementation
 
-### 3.4 Shading & Material Calculations
-The fragment shader runs per-pixel color and lighting lighting calculations. We implemented varied material paradigms:
-- **`meshStandardMaterial`**: Calculates color using Physically Based Rendering (PBR) approximations. It utilizes defined `roughness` and `metalness` floating variables to dictate how incoming light vectors bounce off the calculated normal vectors.
-- **`meshPhongMaterial`**: Applied specifically to Glass Doors and Reception surfaces to compute localized specular highlights using the classic Phong illumination reflection model. It is significantly cheaper than standard physically based models.
-- **`meshPhysicalMaterial`**: A highly intensive extension of the PBR model used for the Reception Desk top. It incorporates `clearcoat` to simulate a layer of polish over the base material and utilizes volume transparency (`transparent`) to simulate refractive index properties without strictly tracing rays.
-- **`MeshDistortMaterial`**: An advanced shader applied to the Quantum Core sphere. It injects a custom mathematical noise algorithm directly into the vertex processing stage of the shader on the GPU, displacing the mesh's physical vertices dynamically before passing them to the fragment shading stage, resulting in the violently warping visualization.
+### 3.1 Rendering Pipeline Overview
 
-### 3.5 Shadows
-A high-resolution `directionalLight` acts as the primary sun. To evaluate shadows, Three.js conducts a secondary render pass from the explicit viewpoint of the light source using an embedded Orthographic shadow-camera. It records the depth map of the scene. During the primary camera render, fragments look up their position in this shadow map to detect if they are occluded from the light source, darkening their final output color accordingly. We aggressively optimize this by specifically defining boolean `castShadow` and `receiveShadow` flags mathematically omitting unnecessary geometric calculations on micro-objects.
+The application leverages WebGL's forward rendering pipeline via Three.js:
 
-## 4. Mathematical Transformations Used
-Geometric affine transformations form the backbone of constructing the scene graph layout and animating the objects. The implementation relies fundamentally on Matrix operations.
+1. **Scene Graph Construction:** All geometry, lights, and materials are organized in a hierarchical Three.js `Group` tree, which maps directly to the model transformation stack.
+2. **Vertex Processing:** Position, normal, and UV data are passed to WebGL vertex shaders. Three.js handles the Model-View-Projection (MVP) matrix computation automatically based on declared transforms.
+3. **Fragment Processing:** Fragment shaders compute the final pixel color using the Phong/PBR lighting model, sampling textures and applying emissive/reflective contributions.
+4. **Depth Testing:** `shadows` is enabled on the `<Canvas>` component, which activates the WebGL depth buffer (`gl.DEPTH_TEST`). This ensures correct occlusion between all opaque geometry.
+5. **Output Merge:** Blending is applied for transparent materials (glass doors, drone rotors, tree canopies), respecting draw order.
 
-### 4.1 Translation ($T$)
-The process of relocating a vertex linearly across the X, Y, or Z axis. By modifying the `position={...}` prop, coordinate vectors are shifted relative to the origin.
-- **Linear Translation Animation**: In `Door.jsx`, an interactive slider uses Three.js's Linear Interpolation (`THREE.MathUtils.lerp`). Upon an interaction event changing a boolean state, the door continuously calculates its intermediate `x` coordinate fractionally between its origin and its maximum sliding displacement per frame based on the elapsed `delta` time, creating a smooth translation matrix update.
+---
 
-### 4.2 Rotation ($R$)
-Rotations rely on Euler angle calculations represented in Radians. 
-- **Static Rotations**: Floor planes in Three.js generate vertically on the XY axis by default. To lay them flat, we pass the radian calculation `rotation={[-Math.PI / 2, 0, 0]}` shifting them exactly 90 degrees around the X-axis.
-- **Trigonometric Matrix Animation**: The `Drone.jsx` NPC utilizes complex Trigonometric combinations. The X and Z translations are tethered to `Math.cos(time)` and `Math.sin(time)` simultaneously, mathematically forcing the position vector to trace a perfect circle relative to its local origin. Simultaneously, its Y Translation incorporates a secondary `Math.sin(time * 3)` to oscillate up and down, simulating a hovering bobbing frame. 
+## 4. Mathematical Transformations
 
-### 4.3 Scale ($S$)
-Scaling matrices are utilized to proportionally warp generic polygonal data. A simple `boxGeometry` measuring $1x1x1$ is multiplied by scale parameters, such as $args={[20, 5, 0.2]}$, to transform the basic cube directly into an elongated architectural wall. 
+All 3D objects are placed and animated using the standard affine transformation matrices applied via Three.js's scene graph:
 
-### 4.4 Hierarchical Modeling (Matrix Multiplication)
-Constructing complex composite models requires nesting standard structures via scoping groupings (`<group>`). This establishes parent node / child node dependency chains. 
-- *Implementation Case Study*: In the `Workspace.jsx` file, a singular Desk element is constructed from a tabletop primitive natively positioned at `[0, 0.75, 0]`, with four explicitly positioned leg cylinders at offsets like `[-1.8, 0.375, -0.8]`. A Chair is nested relative to the edge of the desk at position `[0,0,1.5]`. 
-- By wrapping this entire assembly in a root `<group>`, we establish a localized coordinate grid. When the Hub layout demands four desks, we simply reference the parent `<DeskGroup>` component and pass a primary translation vector such as `[-5, 0, -3]`. 
-- The GPU calculates the parent's transformation matrix (World Matrix). Every child node mathematically multiples its local coordinate matrix strictly against the parent's World Matrix. Consequently, the desktop, all four legs, and the nested chair instantly and flawlessly relocate to the correct coordinate in the global space while perfectly preserving their relative distances natively.
+### 4.1 Translation
+Objects are positioned using `position={[x, y, z]}` which internally applies a translation matrix:
 
-## 5. Screenshots of the Virtual Hub
-*(Note: As this is a live interactive application, please execute the local server using `npm run dev` and navigate the environment. Screenshots are to be appending directly below to demonstrate fulfillment of the graphical criteria)*
+$$T = \begin{bmatrix} 1 & 0 & 0 & t_x \\ 0 & 1 & 0 & t_y \\ 0 & 0 & 1 & t_z \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
 
-- **Screenshot 1**: Comprehensive exterior Walkway highlighting the Procedural Texture mapping (Noise generation for concrete, grass) and hierarchically modeled Sci-Fi Translucent Trees casting mapped directional shadows.
-- **Screenshot 2**: First-Person player view entering the AI Lab, emphasizing the `MeshDistortMaterial` shading behavior on the Quantum Core and emissive lighting evaluations scaling onto the Server node geometries.
-- **Screenshot 3**: Focus on the Reception desk exhibiting the Physical Glass Material `clearcoat` specular reflection characteristics processing the adjacent point lights.
-- **Screenshot 4**: Direct comparison layout of the overarching Workspace geometry arrays viewed explicitly through the mathematical Orthographic Projection toggle, followed by immediately toggling back to Perspective Projection to visualize spatial distance deformation.
+The sliding door uses `THREE.MathUtils.lerp()` on the X-coordinate each frame:
+```js
+meshRef.current.position.x = THREE.MathUtils.lerp(current, targetX, delta * 3);
+```
 
-## 6. Challenges and Recommendations
+### 4.2 Rotation
+The security camera head oscillates using a sine-driven rotation:
+```js
+headRef.current.rotation.y = Math.sin(time) * 0.8;
+```
 
-### 6.1 Challenges Encountered
-1. **Physical Material Performance Degradation:** Initially, the reception desk's glass cover strictly utilized standard physical `transmission` rendering parameters. Transmission forces the engine to conduct secondary off-screen render passes to accurately simulate complex index refraction mapping through the object body. With high fragment counts, this crippled the application framerate down below 20 FPS on standard integrated GPUs. 
-2. **WebGL Context Collision Limitations:** In a traditional game engine (Unity/Unreal), physical bounding boxes evaluate collision geometry recursively via physics systems. Standard React Three Fiber strictly defines raw vertex graphics boundaries, lacking a native rigid body collision solution, resulting in the player's First-Person camera freely tracking infinitely through solid generic wall primitives into empty vector space.
-3. **Shadow Map Artifacting:** Generating comprehensive directional shadow maps across expansive exterior and interior spaces caused distinct pixelated shadow artifacts (aliasing) rendering on high-resolution surfaces.
+The drone faces its direction of travel:
+```js
+groupRef.current.rotation.y = -(time * 0.5);
+```
 
-### 6.2 Recommendations and Resolutions
-1. **Performance Optimization Architecture:** To stabilize framerates across variable hardware scopes without sacrificing visual premium aesthetics, severe optimization procedures were applied. The expensive volume `transmission` material was refactored and mathematically swapped out for a high-gloss `transparent` standard `opacity` model. High-impact `<Canvas>` parameters heavily limited the physical Device Pixel Ratio (`dpr={[1, 1.5]}`) preventing 4K screens from exponentially crashing internal fill rates. Additionally, over 70+ extraneous geometric components (such as minor desk arrays or structural pole details) mathematically revoked their `castShadow` authorization, significantly shrinking the calculation overhead load placed on the WebGL rasterizer.
-2. **Navigational Vector Clamping:** Since structurally integrating an entire rigid body physics library (like `Cannon.js` or `Ammo.js`) for collision processing was deemed overwhelmingly resource-intensive given the graphics-focused project scope, strict abstract boundary clamps were applied mathematically. Inside `Player.jsx`, utilizing `THREE.MathUtils.clamp()` securely restricted the player vector'XYZ tracking updates inherently, enforcing a tight pseudo-physical barrier wall preventing movement coordinates mapping infinitely outward.
-3. **Future Extensibility:** It is highly recommended that future iterations of this project invest in implementing dedicated normal map texturing loading logic over procedural CPU canvas generation. Dedicated `.png` normal map implementation allows shading routines to mathematically fake micro-surface complex volume behaviors relying strictly on cheap surface-normal light bounce manipulation while utilizing significantly less geometry loading.
+Rotation is applied as:
+$$R_y(\theta) = \begin{bmatrix} \cos\theta & 0 & \sin\theta & 0 \\ 0 & 1 & 0 & 0 \\ -\sin\theta & 0 & \cos\theta & 0 \\ 0 & 0 & 0 & 1 \end{bmatrix}$$
 
-## 7. Conclusion
-The "Zuntenium: KHU Innovation and Learning Hub" successful satisfies and implements all core structural criteria of foundational computer graphics. 
+### 4.3 Scaling
+Scaling is applied to room geometry (e.g., `<boxGeometry args={[20, 10, 0.2]} />`) which defines the local scale of each object relative to its group's origin.
 
-Mathematical processing forms the basis of all visual logic, successfully applying intricate continuous Trigonometric affine transformations onto 3D animated objects. Core structural elements dynamically utilize Hierarchical Matrix scope chains to securely organize and replicate complex room infrastructure seamlessly into a cohesive scale model. Realistic shading properties evaluating direct Depth Maps, comprehensive Point and Directional lighting setups manipulating material responses via standard GPU shader passes, and specific interactive toggles allowing direct mechanical modification of explicit Projection technique properties (Orthographic vs Perspective) have been established. Ultimately, the finalized 3D virtual application succeeds in accurately translating raw algebraic matrices visually into an immersive, premium real-time spatial simulation.
+### 4.4 Hierarchical Transforms (Model Matrix Composition)
+All rooms are children of `Hub.jsx`. The chair group inside `DeskGroup` is expressed relative to the desk's local origin. The drone's rotors are children of the drone body group. This composes transformation matrices as:
+
+$$M_{world} = M_{parent} \cdot M_{local}$$
+
+This means moving a desk automatically repositions all chairs and screens attached to it — a core principle of **hierarchical scene graph modeling**. This principle was crucial in the **Orthogonal T-Junction Layout**, allowing the Workspace (a complex 20x15 model) to be rotated exactly by `-Math.PI / 2` and translated to `X = 29.5` in `Hub.jsx` while perfectly preserving the intricate internal placement of its desks and chairs.
+
+### 4.5 Drone Circular Path (Trigonometric Translation)
+The drone patrols in a circle using parametric equations updated each frame:
+```js
+x = origin_x + cos(t * 0.5) * radius
+z = origin_z + sin(t * 0.5) * radius
+y = origin_y + sin(t * 3) * 0.2   // hover bob
+```
+
+---
+
+## 5. Lighting and Shading
+
+### 5.1 Lighting Sources
+
+| Light | Type | Role |
+|---|---|---|
+| `ambientLight` | Ambient | Base fill illumination, warm `#fff8e1`, no shadows |
+| `directionalLight` | Directional | Primary sun-like source with shadow map enabled |
+| `pointLight` (Reception) | Point | Warm interior glow, toggleable by user |
+| `pointLight` (AI Lab) | Point | Cyan glow for the central AI Core object |
+
+### 5.2 Shading Models
+
+**Phong Shading (`meshPhongMaterial`):** Used on the sliding door. Computes per-fragment specular highlights using the Phong reflection model:
+
+$$I = k_a I_a + k_d (L \cdot N) I_d + k_s (R \cdot V)^n I_s$$
+
+The `shininess` parameter directly controls the specular exponent `n`, producing a glass-like highlight on the door panel.
+
+**Gouraud-approximating Standard Shading (`meshStandardMaterial`):** Used on walls, floors, desks. Implements the PBR metalness/roughness workflow — a physically-based generalization of Gouraud shading computed per-vertex then interpolated.
+
+**Physical Shading (`meshPhysicalMaterial`):** Used on the glass desk top and drone body. Adds `clearcoat` for a secondary Fresnel-based specular layer, simulating lacquered or coated surfaces.
+
+**Emissive Unlit (`meshBasicMaterial`):** Used on neon floor strips, drone rotors, and indicator lights. These surfaces emit color without receiving or casting light, simulating self-illuminating components.
+
+### 5.3 Shadow Implementation
+
+Shadow mapping is implemented via a `directionalLight` with `castShadow`:
+```jsx
+<directionalLight castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0005}>
+  <orthographicCamera attach="shadow-camera" args={[-40, 40, 40, -40]} />
+</directionalLight>
+```
+
+The shadow camera uses an orthographic frustum because directional light rays are parallel. All opaque meshes carry `castShadow` and/or `receiveShadow` flags, enabling depth comparison in the shadow pass.
+
+---
+
+## 6. Camera and Projection
+
+### 6.1 Perspective Projection
+The default camera uses a perspective frustum:
+```jsx
+<PerspectiveCamera makeDefault position={[0, 2, 8]} fov={60} near={0.1} far={1000} />
+```
+This applies the perspective divide: $x' = x/z$, producing a natural vanishing-point view that simulates human eye optics. FOV of 60° balances realism with spatial comfort.
+
+### 6.2 Orthographic Projection
+Toggling the projection switches to:
+```jsx
+<OrthographicCamera makeDefault position={[0, 20, 8]} zoom={40} near={0.1} far={1000} />
+```
+In orthographic mode, parallel lines remain parallel — all depth cues from perspective foreshortening are eliminated. This mode is commonly used in architectural and technical drawing applications.
+
+The toggle is controlled via a `zustand` state flag and accessible from the HUD button during walkthrough.
+
+### 6.3 First-Person Walkthrough (Interactive Camera)
+`PointerLockControls` locks the mouse cursor and maps mouse movement to Euler rotations on the camera's orientation. Keyboard WASD input is mapped via `useKeyboardControls`, then projected onto the camera's local forward/right vectors:
+```js
+camera.translateX(direction.x);
+camera.translateZ(direction.z);
+camera.position.y = 1.8; // Eye height locked
+```
+
+---
+
+## 7. Animation
+
+Two primary animated components are implemented using `useFrame`, which is called each render tick:
+
+### 7.1 Patrol Drone (Moving NPC Avatar)
+The drone executes a continuous circular flight path around the reception entrance. Position updates are driven by time-based trigonometry, and the drone's yaw continuously tracks its direction of travel. A subtle sine-wave bob adds realism.
+
+### 7.2 Rotating Security Camera (Oscillating Mechanism)
+The camera head rotates around the Y-axis using `Math.sin(time)`, producing a ±45° sweep patrol motion. The head mesh is a child of the base group, demonstrating hierarchical animation — only the child rotates, the base stays fixed.
+
+### 7.3 Hologram Logo (Continuous Rotation)
+The `NEXUSPOINT` hologram over the reception desk applies `rotation.y += 0.01` per frame wrapped in a `<Float>` component for additional procedural floating offset.
+
+### 7.4 Sliding Door (Event-Triggered Animation)
+On click, the door transitions from closed (X=0) to open (X = width × 0.9) using linear interpolation per frame until the target is reached. This is a state-machine driven timed translation.
+
+---
+
+## 8. User Interaction
+
+| Action | Method | Effect |
+|---|---|---|
+| Click canvas | PointerLock API | Enters first-person mode |
+| WASD / Arrow keys | `useKeyboardControls` | Walks through the scene |
+| Mouse movement | `PointerLockControls` | Rotates camera view |
+| Click door | Three.js raycaster onClick | Toggles door open/close |
+| Click light switch | Three.js raycaster onClick | Toggles reception lights on/off |
+| HUD button | React state + zustand | Switches perspective/orthographic camera |
+| ESC key | Browser PointerLock API | Releases cursor lock |
+
+---
+
+## 9. Texture Mapping
+
+All textures are generated procedurally using the Canvas 2D API and converted to `THREE.CanvasTexture`:
+
+| Texture | Algorithm | Applied To |
+|---|---|---|
+| Grid texture | Filled rectangles with line strokes | Reception floor |
+| Checkerboard texture | Alternating filled squares | Workspace floor |
+| Noise texture | Per-pixel PRNG RGB offset | Grass, carpet, walkway |
+
+All textures are configured with `RepeatWrapping` for seamless tiling across large surfaces.
+
+---
+
+## 10. Rendering Techniques
+
+### Depth Testing
+WebGL's `DEPTH_TEST` is activated via the `shadows` prop on Canvas. Every fragment's Z value is compared against the depth buffer — only the nearest fragment writes to the color buffer. This prevents geometry z-fighting and ensures correct occlusion.
+
+### Shadow Mapping (Bonus)
+A two-pass shadow rendering approach is used:
+- **Pass 1:** Scene is rendered from the directional light's viewpoint using `orthographicCamera`. Depth values form a shadow map texture.
+- **Pass 2:** In the main render pass, each fragment's position is transformed into light space; if its depth exceeds the shadow map lookup value, it is in shadow and receives no diffuse/specular contribution.
+
+### PBR Environment Reflections
+The `<Environment preset="forest">` component from `@react-three/drei` loads a pre-filtered HDRI cube map, providing image-based lighting (IBL) for metallic surfaces throughout the scene.
+
+---
+
+## 11. Screenshots
+
+> Screenshots can be captured by the user from the running application at `http://localhost:5173` after running `npm run dev` in the project directory.
+
+Key views to capture:
+- **Overhead view** (after toggling Orthographic projection): shows the full floor plan
+- **Reception entrance**: hologram, sliding door, security camera
+- **AI Lab**: glowing cyan AI core with containment rings
+- **Workspace**: amber chairs, emerald desk trims
+- **Smart Classroom**: emerald smartboard with ML pipeline content
+- **Outdoor campus**: golden sparkle trail, amber-glass trees, campus sign
+
+---
+
+## 12. Challenges and Recommendations
+
+### Challenges Encountered
+
+| Challenge | Resolution |
+|---|---|
+| Shadow performance (large shadow maps) | Halved shadow-mapSize to `512x512` to save VRAM |
+| Expensive `transmission` material (glass trees) | Used `opacity` for desk glass; kept transmission only for tree canopy |
+| Pointer lock not available in all browsers | Added graceful fallback overlay when pointer lock is unavailable |
+| High polygon fill rate on low-end devices | Capped DPR at 1.2, reduced background stars to 600, outdoor sparkles to 50 |
+| Seamless layout without Z-fighting | Engineered a mathematically perfect Orthogonal Grid layout instead of diagonal wings |
+| Tying room transitions visually | Added full height walls and ceilings (Y=5) to completely enclose the campus architecture |
+| Texture Generation Memory Overhead | Lowered procedural texture resolutions (Grass 512, Concrete 256) |
+
+### Recommendations
+
+1. **GLTF Model Loading:** Replace procedural geometry with pre-authored GLTF models for higher visual fidelity.
+2. **Level of Detail (LOD):** Implement Three.js `LOD` groups to swap low-poly versions of distant rooms.
+3. **Post-Processing:** Integrate `@react-three/postprocessing` to add bloom on emissive elements and SSAO depth cues.
+4. **Physics:** Add a `rapier` or `cannon-es` physics layer via `@react-three/rapier` for collision-aware walkthrough.
+5. **Audio:** Spatial audio cues (ambient lab hum, footsteps) would greatly enhance immersion.
+
+---
+
+## 13. Conclusion
+
+The NexusPoint Innovation & Learning Hub successfully demonstrates all six required Computer Graphics principles within an interactive, real-time WebGL application:
+
+1. **3D Modeling & Transformations** — Hierarchical scene graph with translation, rotation, and scaling applied to all objects
+2. **Lighting & Shading** — Phong, Standard (PBR), and Physical materials with ambient, directional, and point light sources
+3. **Camera & Projection** — Perspective (default walkthrough) and Orthographic (toggle) with interactive first-person PointerLock control
+4. **Animation** — Four animated components: drone patrol, security camera pan, hologram rotation, and sliding door
+5. **User Interaction** — Mouse/keyboard navigation, clickable door, toggleable lights, and camera projection switch
+6. **Rendering Techniques** — Depth testing, procedural texture mapping, shadow map implementation, and PBR environment reflections
+
+The project demonstrates that a sophisticated, multi-room 3D environment meeting academic CG standards can be delivered as a browser-hosted WebGL application accessible from any modern device without a plugin or native binary.
+
+---
+
+*Built with Three.js · React Three Fiber · @react-three/drei · Zustand · Vite*
+*NexusPoint Innovation & Learning Hub — Computer Graphics Assignment Submission*

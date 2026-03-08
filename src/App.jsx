@@ -23,7 +23,7 @@ export default function App() {
         <Canvas
           shadows // (Enables WebGL Depth Testing for Shadows)
           gl={{ antialias: false, powerPreference: "high-performance" }}
-          dpr={[1, 1.5]} // Limit pixel ratio for high-res screens to prevent massive fill rate lag
+          dpr={[1, 1.2]} // Capped lower for performance
         >
           {/* --- GRAPHICS PRINCIPLE 3: CAMERA AND PROJECTION --- */}
           {/* Explicitly defining the Cameras to mathematically demonstrate Perspective vs Orthographic mapping */}
@@ -33,20 +33,22 @@ export default function App() {
             <OrthographicCamera makeDefault position={[0, 20, 8]} zoom={40} near={0.1} far={1000} />
           )}
 
-          <color attach="background" args={['#050505']} />
-          <Stars radius={100} depth={50} count={1500} factor={4} saturation={0} fade speed={1} />
+          {/* Dark forest background */}
+          <color attach="background" args={['#020a06']} />
+          <Stars radius={100} depth={50} count={600} factor={4} saturation={0} fade speed={1} />
 
-          {/* Environment provides stunning PBR reflections for our metals and glass */}
-          <Environment preset="night" background={false} />
+          {/* Environment provides PBR reflections using forest HDRI */}
+          <Environment preset="forest" background={false} />
 
           {/* --- GRAPHICS PRINCIPLE 2: LIGHTING AND SHADING --- */}
-          {/* Ambient light for base illumination, Directional Light calculates localized Shadow Maps */}
-          <ambientLight intensity={0.2} />
+          {/* Warm ambient light for base illumination, Directional Light casts localized Shadow Maps */}
+          <ambientLight color="#fff8e1" intensity={0.3} />
           <directionalLight
             castShadow
             position={[20, 30, 10]}
-            intensity={1.5}
-            shadow-mapSize={[1024, 1024]} // Reduced shadow map size for performance
+            color="#fffbe6"
+            intensity={1.8}
+            shadow-mapSize={[512, 512]} // Lowered for performance
             shadow-bias={-0.0005}
           >
             <orthographicCamera attach="shadow-camera" args={[-40, 40, 40, -40]} />

@@ -10,14 +10,14 @@ export default function Door({ position, rotation = [0, 0, 0], args = [3, 4, 0.2
 
     useFrame((state, delta) => {
         // --- GRAPHICS PRINCIPLE 1: 3D TRANSFORMATIONS (Translation) ---
-        // Sliding door logic interpolating the X-coordinate transformation matrix
+        // Sliding door logic: linearly interpolates the X-coordinate transformation matrix
         const targetX = isOpen ? args[0] * 0.9 : 0;
         meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, targetX, delta * 3);
     });
 
     return (
         <group position={position} rotation={rotation}>
-            {/* The door itself */}
+            {/* The door panel */}
             <mesh
                 position={[0, args[1] / 2, 0]}
                 ref={meshRef}
@@ -30,9 +30,9 @@ export default function Door({ position, rotation = [0, 0, 0], args = [3, 4, 0.2
             >
                 <boxGeometry args={args} />
                 {/* --- GRAPHICS PRINCIPLE 2: LIGHTING AND SHADING --- */}
-                {/* We use MeshPhongMaterial explicitly for glossy/shiny specular highlights mimicking glass */}
+                {/* MeshPhongMaterial for glossy specular highlights (visible glass effect) */}
                 <meshPhongMaterial
-                    color={isOpen ? "#4ade80" : "#93c5fd"}
+                    color={isOpen ? "#4ade80" : "#6ee7b7"}
                     shininess={100}
                     transparent
                     opacity={0.7}
